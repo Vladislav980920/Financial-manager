@@ -1,5 +1,6 @@
 package org.example.dao;
 
+import lombok.SneakyThrows;
 import org.example.model.Category;
 import org.example.util.DatabaseConnection;
 
@@ -10,16 +11,12 @@ import java.util.List;
 public class CategoryDao {
     private final Connection connection;
 
+    @SneakyThrows
     public CategoryDao() {
         this.connection = DatabaseConnection.getConnection();
     }
 
-    /**
-     * Добавляет новую категорию в базу данных
-     * @param category объект категории для добавления
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void addCategory(Category category) throws SQLException {
+    public void addCategory(Category category) {
         String sql = "INSERT INTO categories (name, type, family_id) VALUES (?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setString(1, category.getName());
@@ -33,11 +30,12 @@ public class CategoryDao {
                     category.setId(generatedKeys.getInt(1));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error adding category", e);
         }
     }
 
-
-    public Category getCategoryByNameAndFamily(String name, int familyId) throws SQLException {
+    public Category getCategoryByNameAndFamily(String name, int familyId) {
         String sql = "SELECT * FROM categories WHERE name = ? AND family_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, name);
@@ -52,20 +50,15 @@ public class CategoryDao {
                     );
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting category by name and family", e);
         }
         return null;
     }
 
-    /**
-     * Получает все категории для указанной семьи
-     * @param familyId идентификатор семьи
-     * @return список категорий семьи
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<Category> getCategoriesByFamily(int familyId) throws SQLException {
+    public List<Category> getCategoriesByFamily(int familyId) {
         List<Category> categories = new ArrayList<>();
         String sql = "SELECT * FROM categories WHERE family_id = ? ORDER BY name";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
 
@@ -79,21 +72,15 @@ public class CategoryDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting categories by family", e);
         }
         return categories;
     }
 
-    /**
-     * Получает категории по типу (доход/расход)
-     * @param familyId идентификатор семьи
-     * @param type тип категории ("income" или "expense")
-     * @return список категорий указанного типа
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<Category> getCategoriesByType(int familyId, String type) throws SQLException {
+    public List<Category> getCategoriesByType(int familyId, String type) {
         List<Category> categories = new ArrayList<>();
         String sql = "SELECT * FROM categories WHERE family_id = ? AND type = ? ORDER BY name";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
             statement.setString(2, type);
@@ -108,16 +95,13 @@ public class CategoryDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting categories by type", e);
         }
         return categories;
     }
 
-    /**
-     * Обновляет информацию о категории
-     * @param category объект категории с обновленными данными
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void updateCategory(Category category) throws SQLException {
+    public void updateCategory(Category category) {
         String sql = "UPDATE categories SET name = ?, type = ?, family_id = ? WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, category.getName());
@@ -126,29 +110,22 @@ public class CategoryDao {
             statement.setInt(4, category.getId());
 
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error updating category", e);
         }
     }
 
-    /**
-     * Удаляет категорию по ID
-     * @param id идентификатор категории для удаления
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void deleteCategory(int id) throws SQLException {
+    public void deleteCategory(int id) {
         String sql = "DELETE FROM categories WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting category", e);
         }
     }
 
-    /**
-     * Проверяет существование категории
-     * @param id идентификатор категории
-     * @return true если категория существует, иначе false
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public boolean categoryExists(int id) throws SQLException {
+    public boolean categoryExists(int id) {
         String sql = "SELECT 1 FROM categories WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
@@ -156,21 +133,16 @@ public class CategoryDao {
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next();
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error checking if category exists", e);
         }
     }
 
-    /**
-     * Получает глобальные категории (для всех семей)
-     * @return список глобальных категорий
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<Category> getGlobalCategories() throws SQLException {
+    public List<Category> getGlobalCategories() {
         List<Category> categories = new ArrayList<>();
         String sql = "SELECT * FROM categories WHERE family_id IS NULL ORDER BY name";
-
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(sql)) {
-
             while (resultSet.next()) {
                 categories.add(new Category(
                         resultSet.getInt("id"),
@@ -179,21 +151,15 @@ public class CategoryDao {
                         resultSet.getInt("family_id")
                 ));
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting global categories", e);
         }
         return categories;
     }
 
-    /**
-     * Ищет категории по названию (частичное совпадение)
-     * @param familyId идентификатор семьи
-     * @param namePart часть названия для поиска
-     * @return список найденных категорий
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<Category> searchCategoriesByName(int familyId, String namePart) throws SQLException {
+    public List<Category> searchCategoriesByName(int familyId, String namePart) {
         List<Category> categories = new ArrayList<>();
         String sql = "SELECT * FROM categories WHERE family_id = ? AND name LIKE ? ORDER BY name";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
             statement.setString(2, "%" + namePart + "%");
@@ -208,17 +174,13 @@ public class CategoryDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error searching categories by name", e);
         }
         return categories;
     }
 
-    /**
-     * Получает количество категорий для семьи
-     * @param familyId идентификатор семьи
-     * @return количество категорий
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public int getCategoriesCount(int familyId) throws SQLException {
+    public int getCategoriesCount(int familyId) {
         String sql = "SELECT COUNT(*) FROM categories WHERE family_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
@@ -228,6 +190,8 @@ public class CategoryDao {
                     return resultSet.getInt(1);
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting categories count", e);
         }
         return 0;
     }

@@ -1,5 +1,6 @@
 package org.example.dao;
 
+import lombok.SneakyThrows;
 import org.example.model.Family;
 import org.example.util.DatabaseConnection;
 
@@ -10,11 +11,12 @@ import java.util.List;
 public class FamilyDao {
     private Connection connection;
 
+    @SneakyThrows
     public FamilyDao() {
         this.connection = DatabaseConnection.getConnection();
     }
 
-    public void addFamily(Family family) throws SQLException {
+    public void addFamily(Family family) {
         String sql = "INSERT INTO families (name) VALUES (?)";
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setString(1, family.getName());
@@ -26,10 +28,12 @@ public class FamilyDao {
                     family.setId(generatedKeys.getInt(1));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error adding family", e);
         }
     }
 
-    public Family getFamilyByName(String name) throws SQLException {
+    public Family getFamilyByName(String name) {
         String sql = "SELECT * FROM families WHERE name = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, name);
@@ -41,48 +45,52 @@ public class FamilyDao {
                     );
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting family by name", e);
         }
         return null;
     }
 
-
-    public List<Family> getAllFamilies() throws SQLException {
+    public List<Family> getAllFamilies() {
         List<Family> families = new ArrayList<>();
         String sql = "SELECT * FROM families";
-
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(sql)) {
-
             while (resultSet.next()) {
                 families.add(new Family(
                         resultSet.getInt("id"),
                         resultSet.getString("name")
                 ));
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting all families", e);
         }
         return families;
     }
 
-
-    public void updateFamily(Family family) throws SQLException {
+    public void updateFamily(Family family) {
         String sql = "UPDATE families SET name = ? WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, family.getName());
             statement.setInt(2, family.getId());
 
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error updating family", e);
         }
     }
 
-    public void deleteFamily(int id) throws SQLException {
+    public void deleteFamily(int id) {
         String sql = "DELETE FROM families WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting family", e);
         }
     }
 
-    public boolean familyExists(int id) throws SQLException {
+    public boolean familyExists(int id) {
         String sql = "SELECT 1 FROM families WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
@@ -90,13 +98,14 @@ public class FamilyDao {
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next();
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error checking if family exists", e);
         }
     }
 
-    public List<Family> searchFamiliesByName(String namePart) throws SQLException {
+    public List<Family> searchFamiliesByName(String namePart) {
         List<Family> families = new ArrayList<>();
         String sql = "SELECT * FROM families WHERE name LIKE ?";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, "%" + namePart + "%");
 
@@ -108,11 +117,13 @@ public class FamilyDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error searching families by name", e);
         }
         return families;
     }
 
-    public int getFamilyMembersCount(int familyId) throws SQLException {
+    public int getFamilyMembersCount(int familyId) {
         String sql = "SELECT COUNT(*) FROM family_members WHERE family_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
@@ -122,6 +133,8 @@ public class FamilyDao {
                     return resultSet.getInt(1);
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting family members count", e);
         }
         return 0;
     }

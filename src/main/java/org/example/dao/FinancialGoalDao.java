@@ -1,5 +1,6 @@
 package org.example.dao;
 
+import lombok.SneakyThrows;
 import org.example.model.FinancialGoal;
 import org.example.util.DatabaseConnection;
 
@@ -12,16 +13,12 @@ import java.util.List;
 public class FinancialGoalDao {
     private Connection connection;
 
+    @SneakyThrows
     public FinancialGoalDao() {
         this.connection = DatabaseConnection.getConnection();
     }
 
-    /**
-     * Добавляет новую финансовую цель в базу данных
-     * @param goal объект финансовой цели для добавления
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void addGoal(FinancialGoal goal) throws SQLException {
+    public void addGoal(FinancialGoal goal) {
         String sql = "INSERT INTO financial_goals (family_id, name, description, target_amount, " +
                 "current_amount, target_date, priority) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -40,16 +37,12 @@ public class FinancialGoalDao {
                     goal.setId(generatedKeys.getInt(1));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error adding financial goal", e);
         }
     }
 
-    /**
-     * Получает финансовую цель по ID
-     * @param id идентификатор цели
-     * @return объект финансовой цели или null, если не найдена
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public FinancialGoal getGoalById(int id) throws SQLException {
+    public FinancialGoal getGoalById(int id) {
         String sql = "SELECT * FROM financial_goals WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
@@ -68,20 +61,15 @@ public class FinancialGoalDao {
                     );
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting financial goal by id", e);
         }
         return null;
     }
 
-    /**
-     * Получает все финансовые цели для указанной семьи
-     * @param familyId идентификатор семьи
-     * @return список финансовых целей семьи
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<FinancialGoal> getGoalsByFamily(int familyId) throws SQLException {
+    public List<FinancialGoal> getGoalsByFamily(int familyId) {
         List<FinancialGoal> goals = new ArrayList<>();
         String sql = "SELECT * FROM financial_goals WHERE family_id = ? ORDER BY target_date ASC";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
 
@@ -99,16 +87,13 @@ public class FinancialGoalDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting goals by family", e);
         }
         return goals;
     }
 
-    /**
-     * Обновляет информацию о финансовой цели
-     * @param goal объект финансовой цели с обновленными данными
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void updateGoal(FinancialGoal goal) throws SQLException {
+    public void updateGoal(FinancialGoal goal) {
         String sql = "UPDATE financial_goals SET family_id = ?, name = ?, description = ?, " +
                 "target_amount = ?, current_amount = ?, target_date = ?, priority = ? WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -122,48 +107,35 @@ public class FinancialGoalDao {
             statement.setInt(8, goal.getId());
 
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error updating financial goal", e);
         }
     }
 
-    /**
-     * Удаляет финансовую цель по ID
-     * @param id идентификатор цели для удаления
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void deleteGoal(int id) throws SQLException {
+    public void deleteGoal(int id) {
         String sql = "DELETE FROM financial_goals WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting financial goal", e);
         }
     }
 
-    /**
-     * Добавляет сумму к текущему накоплению цели
-     * @param goalId идентификатор цели
-     * @param amount сумма для добавления
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void addToCurrentAmount(int goalId, BigDecimal amount) throws SQLException {
+    public void addToCurrentAmount(int goalId, BigDecimal amount) {
         String sql = "UPDATE financial_goals SET current_amount = current_amount + ? WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setBigDecimal(1, amount);
             statement.setInt(2, goalId);
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error adding to current amount", e);
         }
     }
 
-    /**
-     * Получает цели семьи с приоритетом
-     * @param familyId идентификатор семьи
-     * @param priority приоритет цели ("high", "medium", "low")
-     * @return список целей с указанным приоритетом
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<FinancialGoal> getGoalsByFamilyAndPriority(int familyId, String priority) throws SQLException {
+    public List<FinancialGoal> getGoalsByFamilyAndPriority(int familyId, String priority) {
         List<FinancialGoal> goals = new ArrayList<>();
         String sql = "SELECT * FROM financial_goals WHERE family_id = ? AND priority = ? ORDER BY target_date ASC";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
             statement.setString(2, priority);
@@ -182,24 +154,18 @@ public class FinancialGoalDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting goals by family and priority", e);
         }
         return goals;
     }
 
-    /**
-     * Получает цели семьи с близким сроком выполнения (в течение указанного количества дней)
-     * @param familyId идентификатор семьи
-     * @param days количество дней до срока выполнения
-     * @return список целей с близким сроком
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<FinancialGoal> getUpcomingGoals(int familyId, int days) throws SQLException {
+    public List<FinancialGoal> getUpcomingGoals(int familyId, int days) {
         List<FinancialGoal> goals = new ArrayList<>();
         LocalDate today = LocalDate.now();
         LocalDate targetDate = today.plusDays(days);
 
         String sql = "SELECT * FROM financial_goals WHERE family_id = ? AND target_date BETWEEN ? AND ? ORDER BY target_date ASC";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
             statement.setDate(2, Date.valueOf(today));
@@ -219,20 +185,15 @@ public class FinancialGoalDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting upcoming goals", e);
         }
         return goals;
     }
 
-    /**
-     * Получает завершенные цели семьи (где current_amount >= target_amount)
-     * @param familyId идентификатор семьи
-     * @return список завершенных целей
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<FinancialGoal> getCompletedGoals(int familyId) throws SQLException {
+    public List<FinancialGoal> getCompletedGoals(int familyId) {
         List<FinancialGoal> goals = new ArrayList<>();
         String sql = "SELECT * FROM financial_goals WHERE family_id = ? AND current_amount >= target_amount ORDER BY target_date ASC";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
 
@@ -250,17 +211,13 @@ public class FinancialGoalDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting completed goals", e);
         }
         return goals;
     }
 
-    /**
-     * Получает общую сумму всех целевых накоплений семьи
-     * @param familyId идентификатор семьи
-     * @return общая сумма целей
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public BigDecimal getTotalTargetAmount(int familyId) throws SQLException {
+    public BigDecimal getTotalTargetAmount(int familyId) {
         String sql = "SELECT SUM(target_amount) FROM financial_goals WHERE family_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
@@ -270,17 +227,13 @@ public class FinancialGoalDao {
                     return resultSet.getBigDecimal(1) != null ? resultSet.getBigDecimal(1) : BigDecimal.ZERO;
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting total target amount", e);
         }
         return BigDecimal.ZERO;
     }
 
-    /**
-     * Получает общую сумму текущих накоплений семьи по целям
-     * @param familyId идентификатор семьи
-     * @return общая сумма накоплений
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public BigDecimal getTotalCurrentAmount(int familyId) throws SQLException {
+    public BigDecimal getTotalCurrentAmount(int familyId) {
         String sql = "SELECT SUM(current_amount) FROM financial_goals WHERE family_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
@@ -290,6 +243,8 @@ public class FinancialGoalDao {
                     return resultSet.getBigDecimal(1) != null ? resultSet.getBigDecimal(1) : BigDecimal.ZERO;
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting total current amount", e);
         }
         return BigDecimal.ZERO;
     }

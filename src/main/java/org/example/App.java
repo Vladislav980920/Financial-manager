@@ -1,83 +1,79 @@
 package org.example;
+
+import io.javalin.Javalin;
+import io.javalin.http.Context;
+import org.example.controler.*;
 import org.example.dao.*;
-import org.example.model.*;
 import org.example.services.*;
+import org.example.util.DatabaseInitializer;
 
-import java.math.BigDecimal;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.sql.SQLException;
-import java.time.LocalDate;
 
+public class App extends HttpServlet {
+    private Javalin javalin;
 
-public class App {
-    public static void main(String[] args) {
+    @Override
+    public void init() throws ServletException {
         try {
-            // Инициализация DAO
-            UserDao userDao = new UserDao();
-            FamilyDao familyDao = new FamilyDao();
+            // Initialize DAOs
+            BudgetDao budgetDao = new BudgetDao();
             CategoryDao categoryDao = new CategoryDao();
-            TransactionDao transactionDao = new TransactionDao();
-
-            // 1. Проверка/создание пользователя
-            String username = "Vladislav";
-            User user1 = userDao.getUserByUsername(username);
-
-            if (user1 == null) {
-                // Создаем нового пользователя, если не существует
-                user1 = new User(0, username, "password123", "Vlad@example.com", "admin");
-                userDao.addUser(user1);
-                System.out.println("Новый пользователь создан: " + username);
-            } else {
-                System.out.println("Используем существующего пользователя: " + username);
-            }
-
-            // 2. Проверка/создание семьи
-            String familyName = "Smith Family";
-            Family family = familyDao.getFamilyByName(familyName);
-
-            if (family == null) {
-                family = new Family(0, familyName);
-                familyDao.addFamily(family);
-                System.out.println("Новая семья создана: " + familyName);
-            } else {
-                System.out.println("Используем существующую семью: " + familyName);
-            }
-
-            // 3. Добавляем пользователя в семью (если еще не добавлен)
+            FamilyDao familyDao = new FamilyDao();
             FamilyMemberDao familyMemberDao = new FamilyMemberDao();
-            if (!familyMemberDao.isMemberExists(family.getId(), user1.getId())) {
-                FamilyMember member = new FamilyMember(0, family.getId(), user1.getId(), "head");
-                familyMemberDao.addMember(member);
-                System.out.println("Пользователь добавлен в семью");
-            }
+            FinancialGoalDao goalDao = new FinancialGoalDao();
+            ReminderDao reminderDao = new ReminderDao();
+            TransactionDao transactionDao = new TransactionDao();
+            UserDao userDao = new UserDao();
 
-            // 4. Создаем категории (если еще не существуют)
-            Category incomeCategory = categoryDao.getCategoryByNameAndFamily("Salary", family.getId());
-            if (incomeCategory == null) {
-                incomeCategory = new Category(0, "Salary", "income", family.getId());
-                categoryDao.addCategory(incomeCategory);
-            }
+            // Initialize services
+            BudgetService budgetService = new BudgetService(budgetDao, transactionDao);
+            CategoryService categoryService = new CategoryService(categoryDao);
+            FamilyService familyService = new FamilyService(familyDao, familyMemberDao);
+            GoalService goalService = new GoalService(goalDao);
+            UserService userService = new UserService(userDao);
+            ReminderService reminderService = new ReminderService(reminderDao);
+            TransactionService transactionService = new TransactionService(transactionDao);
 
-            Category expenseCategory = categoryDao.getCategoryByNameAndFamily("Rent", family.getId());
-            if (expenseCategory == null) {
-                expenseCategory = new Category(0, "Rent", "expense", family.getId());
-                categoryDao.addCategory(expenseCategory);
-            }
+            // Create Javalin app with basic config
+            javalin = Javalin.create(config -> {
+                config.jetty = "application/json";
+                // Add any additional configuration here
+            });
 
-            // 5. Теперь можно добавлять транзакции
-            FinanceService financeService = new FinanceService(transactionDao);
-            financeService.addIncome(family.getId(), incomeCategory.getId(),
-                    new BigDecimal("5000.00"), "Salary", LocalDate.now(), user1.getId());
-            financeService.addExpense(family.getId(), expenseCategory.getId(),
-                    new BigDecimal("1500.00"), "Rent", LocalDate.now(), user1.getId());
+            // Initialize controllers
+            new BudgetController(javalin, budgetService);
+            new CategoryController(javalin, categoryService);
+            new FamilyController(javalin, familyService);
+            new GoalController(javalin, goalService);
+            new ReminderController(javalin, reminderService);
+            new UserController(javalin, userService);
+            new TransactionController(javalin, transactionService);
 
-            System.out.println("Транзакции успешно добавлены");
+            // Initialize database
+            DatabaseInitializer.init();
 
         } catch (SQLException e) {
-            System.err.println("Ошибка базы данных: " + e.getMessage());
-            e.printStackTrace();
-        } catch (Exception e) {
-            System.err.println("Неожиданная ошибка: " + e.getMessage());
-            e.printStackTrace();
+            throw new ServletException("Failed to initialize application", e);
+        }
+    }
+
+    @Override
+    protected void service(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        // Javalin handles requests internally, so we don't need to implement this
+        // Just forward to super implementation
+        super.service(req, resp);
+    }
+
+    @Override
+    public void destroy() {
+        if (javalin != null) {
+            javalin.stop();
         }
     }
 }

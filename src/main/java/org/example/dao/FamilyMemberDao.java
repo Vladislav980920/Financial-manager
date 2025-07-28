@@ -1,5 +1,6 @@
 package org.example.dao;
 
+import lombok.SneakyThrows;
 import org.example.model.FamilyMember;
 import org.example.util.DatabaseConnection;
 
@@ -10,16 +11,12 @@ import java.util.List;
 public class FamilyMemberDao {
     private final Connection connection;
 
+    @SneakyThrows
     public FamilyMemberDao() {
         this.connection = DatabaseConnection.getConnection();
     }
 
-    /**
-     * Добавляет нового члена семьи в базу данных
-     * @param member объект члена семьи для добавления
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void addMember(FamilyMember member) throws SQLException {
+    public void addMember(FamilyMember member) {
         String sql = "INSERT INTO family_members (family_id, user_id, role) VALUES (?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setInt(1, member.getFamilyId());
@@ -33,16 +30,12 @@ public class FamilyMemberDao {
                     member.setId(generatedKeys.getInt(1));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error adding family member", e);
         }
     }
 
-    /**
-     * Получает члена семьи по ID
-     * @param id идентификатор члена семьи
-     * @return объект члена семьи или null, если не найден
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public FamilyMember getMemberById(int id) throws SQLException {
+    public FamilyMember getMemberById(int id) {
         String sql = "SELECT * FROM family_members WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
@@ -57,20 +50,15 @@ public class FamilyMemberDao {
                     );
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting family member by id", e);
         }
         return null;
     }
 
-    /**
-     * Получает всех членов семьи
-     * @param familyId идентификатор семьи
-     * @return список членов семьи
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<FamilyMember> getMembersByFamily(int familyId) throws SQLException {
+    public List<FamilyMember> getMembersByFamily(int familyId) {
         List<FamilyMember> members = new ArrayList<>();
         String sql = "SELECT * FROM family_members WHERE family_id = ? ORDER BY role";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
 
@@ -84,20 +72,15 @@ public class FamilyMemberDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting members by family", e);
         }
         return members;
     }
 
-    /**
-     * Получает все семьи, в которых состоит пользователь
-     * @param userId идентификатор пользователя
-     * @return список членств в семьях
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<FamilyMember> getFamiliesByUser(int userId) throws SQLException {
+    public List<FamilyMember> getFamiliesByUser(int userId) {
         List<FamilyMember> members = new ArrayList<>();
         String sql = "SELECT * FROM family_members WHERE user_id = ?";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, userId);
 
@@ -111,16 +94,13 @@ public class FamilyMemberDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting families by user", e);
         }
         return members;
     }
 
-    /**
-     * Обновляет информацию о члене семьи
-     * @param member объект члена семьи с обновленными данными
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void updateMember(FamilyMember member) throws SQLException {
+    public void updateMember(FamilyMember member) {
         String sql = "UPDATE family_members SET family_id = ?, user_id = ?, role = ? WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, member.getFamilyId());
@@ -129,30 +109,22 @@ public class FamilyMemberDao {
             statement.setInt(4, member.getId());
 
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error updating family member", e);
         }
     }
 
-    /**
-     * Удаляет члена семьи по ID
-     * @param id идентификатор члена семьи для удаления
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void deleteMember(int id) throws SQLException {
+    public void deleteMember(int id) {
         String sql = "DELETE FROM family_members WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting family member", e);
         }
     }
 
-    /**
-     * Проверяет существование члена семьи
-     * @param familyId идентификатор семьи
-     * @param userId идентификатор пользователя
-     * @return true если член семьи существует, иначе false
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public boolean isMemberExists(int familyId, int userId) throws SQLException {
+    public boolean isMemberExists(int familyId, int userId) {
         String sql = "SELECT 1 FROM family_members WHERE family_id = ? AND user_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
@@ -161,17 +133,12 @@ public class FamilyMemberDao {
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next();
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error checking if member exists", e);
         }
     }
 
-    /**
-     * Получает роль пользователя в семье
-     * @param familyId идентификатор семьи
-     * @param userId идентификатор пользователя
-     * @return роль пользователя или null, если не является членом
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public String getMemberRole(int familyId, int userId) throws SQLException {
+    public String getMemberRole(int familyId, int userId) {
         String sql = "SELECT role FROM family_members WHERE family_id = ? AND user_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
@@ -182,17 +149,13 @@ public class FamilyMemberDao {
                     return resultSet.getString("role");
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting member role", e);
         }
         return null;
     }
 
-    /**
-     * Получает количество членов семьи
-     * @param familyId идентификатор семьи
-     * @return количество членов семьи
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public int getMembersCount(int familyId) throws SQLException {
+    public int getMembersCount(int familyId) {
         String sql = "SELECT COUNT(*) FROM family_members WHERE family_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
@@ -202,21 +165,15 @@ public class FamilyMemberDao {
                     return resultSet.getInt(1);
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting members count", e);
         }
         return 0;
     }
 
-    /**
-     * Получает членов семьи с определенной ролью
-     * @param familyId идентификатор семьи
-     * @param role роль для поиска
-     * @return список членов семьи с указанной ролью
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public List<FamilyMember> getMembersByRole(int familyId, String role) throws SQLException {
+    public List<FamilyMember> getMembersByRole(int familyId, String role) {
         List<FamilyMember> members = new ArrayList<>();
         String sql = "SELECT * FROM family_members WHERE family_id = ? AND role = ?";
-
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
             statement.setString(2, role);
@@ -231,21 +188,19 @@ public class FamilyMemberDao {
                     ));
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting members by role", e);
         }
         return members;
     }
 
-    /**
-     * Удаляет всех членов семьи (при удалении семьи)
-     * @param familyId идентификатор семьи
-     * @throws SQLException если произошла ошибка при работе с БД
-     */
-    public void deleteAllMembersForFamily(int familyId) throws SQLException {
+    public void deleteAllMembersForFamily(int familyId) {
         String sql = "DELETE FROM family_members WHERE family_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, familyId);
             statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting all members for family", e);
         }
     }
 }
-
