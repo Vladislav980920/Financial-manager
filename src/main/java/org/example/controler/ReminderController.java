@@ -1,5 +1,6 @@
 package org.example.controler;
 
+import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.example.model.Reminder;
@@ -17,15 +18,15 @@ public class ReminderController {
     private static final Logger logger = LoggerFactory.getLogger(ReminderController.class);
     private final ReminderService reminderService;
 
-    public ReminderController(io.javalin.Javalin app, ReminderService reminderService) {
+    public ReminderController(Javalin app, ReminderService reminderService, LocalDate startDate, LocalDate endDate) {
         this.reminderService = reminderService;
-        registerRoutes(app);
+        registerRoutes(app, startDate, endDate);
     }
 
-    private void registerRoutes(io.javalin.Javalin app) {
+    private void registerRoutes(Javalin app, LocalDate startDate, LocalDate endDate) {
         app.post("/api/families/{familyId}/reminders", this::createReminder);
-        app.get("/api/families/{familyId}/reminders", this::getFamilyReminders);
-        app.get("/api/families/{familyId}/reminders/upcoming/{daysAhead}", this::getUpcomingReminders);
+        app.get("/api/families/{familyId}/reminders", ctx -> getFamilyReminders(ctx, startDate, endDate));
+        app.get("/api/families/{familyId}/reminders/upcoming/{daysAhead}", ctx -> getUpcomingReminders(ctx, startDate));
         app.get("/api/families/{familyId}/reminders/active", this::getActiveReminders);
         app.get("/api/families/{familyId}/reminders/overdue", this::getOverdueReminders);
         app.get("/api/families/{familyId}/reminders/type/{type}", this::getRemindersByType);
@@ -73,10 +74,10 @@ public class ReminderController {
         }
     }
 
-    private void getFamilyReminders(Context ctx) {
+    private void getFamilyReminders(Context ctx, LocalDate startDate, LocalDate endDate) {
         try {
             int familyId = Integer.parseInt(ctx.pathParam("familyId"));
-            List<Reminder> reminders = reminderService.getRemindersByFamily(familyId);
+            List<Reminder> reminders = reminderService.getRemindersByFamily(familyId, startDate, endDate);
             ctx.json(reminders);
         } catch (NumberFormatException e) {
             ctx.status(HttpStatus.BAD_REQUEST).json(Map.of("error", "Invalid family ID format"));
@@ -86,12 +87,12 @@ public class ReminderController {
         }
     }
 
-    private void getUpcomingReminders(Context ctx) {
+    private void getUpcomingReminders(Context ctx, LocalDate startDate) {
         try {
             int familyId = Integer.parseInt(ctx.pathParam("familyId"));
             int daysAhead = Integer.parseInt(ctx.pathParam("daysAhead"));
 
-            List<Reminder> reminders = reminderService.getUpcomingReminders(familyId, daysAhead);
+            List<Reminder> reminders = reminderService.getUpcomingReminders(familyId, daysAhead, startDate);
             ctx.json(reminders);
         } catch (NumberFormatException e) {
             ctx.status(HttpStatus.BAD_REQUEST).json(Map.of("error", "Invalid ID or days format"));

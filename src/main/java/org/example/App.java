@@ -2,10 +2,12 @@ package org.example;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.javalin.http.Handler;
 import org.example.controler.*;
 import org.example.dao.*;
 import org.example.services.*;
 import org.example.util.DatabaseInitializer;
+import org.jetbrains.annotations.NotNull;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -13,6 +15,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.LocalDate;
+
+import static jdk.internal.org.jline.utils.Colors.h;
 
 public class App extends HttpServlet {
     private Javalin javalin;
@@ -20,6 +25,9 @@ public class App extends HttpServlet {
     @Override
     public void init() throws ServletException {
         try {
+            // Initialize database
+            DatabaseInitializer.init();
+
             // Initialize DAOs
             BudgetDao budgetDao = new BudgetDao();
             CategoryDao categoryDao = new CategoryDao();
@@ -39,10 +47,9 @@ public class App extends HttpServlet {
             ReminderService reminderService = new ReminderService(reminderDao);
             TransactionService transactionService = new TransactionService(transactionDao);
 
-            // Create Javalin app with basic config
+            // Configure Javalin
             javalin = Javalin.create(config -> {
-                config.jetty = "application/json";
-                // Add any additional configuration here
+                config.plugins.enableDevLogging();
             });
 
             // Initialize controllers
@@ -50,12 +57,12 @@ public class App extends HttpServlet {
             new CategoryController(javalin, categoryService);
             new FamilyController(javalin, familyService);
             new GoalController(javalin, goalService);
-            new ReminderController(javalin, reminderService);
+            new ReminderController(javalin, reminderService, LocalDate.now(), LocalDate.now().plusMonths(1));
             new UserController(javalin, userService);
             new TransactionController(javalin, transactionService);
 
-            // Initialize database
-            DatabaseInitializer.init();
+            // Add health check endpoint
+            javalin.get("/health", ctx -> ctx.result("Server is running"));
 
         } catch (SQLException e) {
             throw new ServletException("Failed to initialize application", e);
@@ -65,9 +72,12 @@ public class App extends HttpServlet {
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        // Javalin handles requests internally, so we don't need to implement this
-        // Just forward to super implementation
-        super.service(req, resp);
+        // Forward all requests to Javalin
+        @NotNull String String;
+        if (javalin != null) javalin.get(String ).service(req, resp);
+        else {
+            resp.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Application not initialized");
+        }
     }
 
     @Override

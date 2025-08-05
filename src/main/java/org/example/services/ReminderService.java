@@ -36,7 +36,7 @@ public class ReminderService {
         }
     }
 
-    public Reminder getReminderById(int id) throws ServiceException {
+    public Reminder getReminderById(int id, int familyId, LocalDate startDate, LocalDate endDate) throws ServiceException {
         try {
             logger.debug("Getting reminder by ID: {}", id);
             Reminder reminder = (Reminder) reminderDao.getRemindersByFamilyAndDateRange(LocalDate.ofEpochDay(id), familyId, startDate, endDate);
@@ -52,7 +52,7 @@ public class ReminderService {
         }
     }
 
-    public List<Reminder> getRemindersByFamily(int familyId) throws ServiceException {
+    public List<Reminder> getRemindersByFamily(int familyId, LocalDate startDate, LocalDate endDate) throws ServiceException {
         try {
             logger.debug("Getting reminders for familyId: {}", familyId);
             List<Reminder> reminders = reminderDao.getRemindersByFamilyAndDateRange(LocalDate.ofEpochDay(familyId), familyId, startDate, endDate);
@@ -64,7 +64,7 @@ public class ReminderService {
         }
     }
 
-    public List<Reminder> getUpcomingReminders(int familyId, int daysAhead) throws ServiceException {
+    public List<Reminder> getUpcomingReminders(int familyId, int daysAhead, LocalDate startDate) throws ServiceException {
         try {
             if (daysAhead <= 0) {
                 throw new IllegalArgumentException("Days ahead must be positive");

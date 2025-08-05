@@ -63,4 +63,9 @@ public class BudgetService {
             throw new RuntimeException("Failed to get budget status", e);
         }
     }
+
+
+    public Budget setBudget() {
+        return null;
+    }
 }
