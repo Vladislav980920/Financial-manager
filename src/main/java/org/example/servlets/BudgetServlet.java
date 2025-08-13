@@ -12,7 +12,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 
 @WebServlet("/api/budgets/*")
@@ -44,7 +43,7 @@ public class BudgetServlet extends HttpServlet {
                 String[] parts = pathInfo.split("/");
                 if (parts.length == 2) {
                     int id = Integer.parseInt(parts[1]);
-                    Budget budget = budgetService.setBudget();
+                    Budget budget = budgetService.setBudget(id);
                     if (budget != null) {
                         sendJsonResponse(resp, budget);
                     } else {
@@ -88,7 +87,7 @@ public class BudgetServlet extends HttpServlet {
                 int id = Integer.parseInt(parts[1]);
                 Budget budget = objectMapper.readValue(req.getInputStream(), Budget.class);
                 budget.setId(id);
-                budgetService.updateBudget(budget);
+                budgetService.setBudget(id);
                 sendJsonResponse(resp, budget);
             } else {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid URL format");
@@ -107,7 +106,7 @@ public class BudgetServlet extends HttpServlet {
             String[] parts = req.getPathInfo().split("/");
             if (parts.length == 2) {
                 int id = Integer.parseInt(parts[1]);
-                budgetService.deleteBudget(id);
+                budgetService.setBudget(id);
                 resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             } else {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid URL format");

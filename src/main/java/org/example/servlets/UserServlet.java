@@ -38,6 +38,12 @@ public class UserServlet extends HttpServlet {
                 handleGetCurrentUser(req, resp);
             } else if (pathInfo.equals("/logout")) {
                 handleLogout(req, resp);
+            } else if (pathInfo.equals("/login")) {
+                // Show login form
+                req.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(req, resp);
+            } else if (pathInfo.equals("/register")) {
+                // Show registration form
+                req.getRequestDispatcher("/WEB-INF/views/auth/register.jsp").forward(req, resp);
             } else if (pathInfo.matches("/\\w+")) {
                 String username = pathInfo.substring(1);
                 User user = userService.getUserByUsername(username);
@@ -71,32 +77,36 @@ public class UserServlet extends HttpServlet {
         }
     }
 
-    private void handleRegistration(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        User user = parseUserFromRequest(req);
-        userService.register(user);
+    private void handleRegistration(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+        try {
+            User user = parseUserFromRequest(req);
+            userService.register(user);
 
+            HttpSession session = req.getSession();
+            session.setAttribute("user", user);
+            session.setAttribute("username", user.getUsername());
 
-        HttpSession session = req.getSession();
-        session.setAttribute("user", user);
-        session.setAttribute("username", user.getUsername());
-
-        sendJsonResponse(resp, user, HttpServletResponse.SC_CREATED);
+            resp.sendRedirect("/views/dashboard");
+        } catch (IllegalArgumentException e) {
+            req.setAttribute("error", e.getMessage());
+            req.getRequestDispatcher("/WEB-INF/views/auth/register.jsp").forward(req, resp);
+        }
     }
 
-    private void handleLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    private void handleLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
         String username = req.getParameter("username");
         String password = req.getParameter("password");
 
         User user = userService.authenticate(username, password);
         if (user != null) {
-            // Create session for authenticated user
             HttpSession session = req.getSession();
             session.setAttribute("user", user);
             session.setAttribute("username", user.getUsername());
 
-            sendJsonResponse(resp, user);
+            resp.sendRedirect("/views/dashboard");
         } else {
-            resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid username or password");
+            req.setAttribute("error", "Invalid username or password");
+            req.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(req, resp);
         }
     }
 

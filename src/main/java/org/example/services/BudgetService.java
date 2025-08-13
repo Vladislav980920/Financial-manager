@@ -65,7 +65,7 @@ public class BudgetService {
     }
 
 
-    public Budget setBudget() {
+    public Budget setBudget(int id) {
         return null;
     }
 }

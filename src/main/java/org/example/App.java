@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
 
-import static jdk.internal.org.jline.utils.Colors.h;
 
 public class App extends HttpServlet {
     private Javalin javalin;
